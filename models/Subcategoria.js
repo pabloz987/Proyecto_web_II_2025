@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Categoria = require('./Categoria'); // Importamos el modelo padre
+const Categoria = require('./Categoria'); 
 
 const Subcategoria = sequelize.define('subcategorias', {
     id_subcategoria: {
@@ -8,13 +8,13 @@ const Subcategoria = sequelize.define('subcategorias', {
         primaryKey: true,
         autoIncrement: true,
     },
-    // La clave foránea se define aquí, pero la relación real se hace en el paso 4
+    // Clave Foránea
     id_categoria: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: Categoria, // Referencia al modelo Categoria
-            key: 'id_categoria', // La clave primaria del modelo padre
+            model: Categoria, 
+            key: 'id_categoria', 
         }
     },
     nombre_subcategoria: {
@@ -29,12 +29,19 @@ const Subcategoria = sequelize.define('subcategorias', {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
     },
-     createdAt: {
+    // Campo de Creación
+    createdAt: {
         type: DataTypes.DATE,
-        field: 'fecha_creacion',
-        defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
+        field: 'fecha_creacion', // Mapeo al nombre de tu diagrama
+        defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
+        allowNull: false
     },
-    updatedAt: false
+    // **¡IMPORTANTE!** Asegúrate de que no hay ninguna definición de columna para 'updatedAt' aquí.
+}, {
+    // OPCIONES DEL MODELO (FUERA DE LA DEFINICIÓN DE COLUMNAS)
+    tableName: 'subcategorias',
+    timestamps: true, // Esto le dice que use createdAt (y buscaría updatedAt)
+    updatedAt: false // **¡ESTO LO DESACTIVA!** Evita que genere el campo `updated_at false`
 });
 
 module.exports = Subcategoria;
