@@ -3,12 +3,13 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-require('dotenv').config(); // Carga las variables del .env
+require('dotenv').config(); 
+var bcrypt = require('bcryptjs'); 
 
-// 1. IMPORTAR TUS MODELOS (Base de Datos)
+// 1. IMPORTAR MODELOS
 const db = require('./models');
 
-// 2. IMPORTAR TUS RUTAS (Separadas por entidad)
+// 2. IMPORTAR RUTAS
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
@@ -25,62 +26,82 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade'); 
 
 app.use(logger('dev'));
-app.use(express.json()); // Middleware CLAVE para leer JSON
+app.use(express.json()); 
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// --- DEFINICIÓN DE ENDPOINTS (RUTAS API) ---
+// --- DEFINICIÓN DE ENDPOINTS ---
 
-// Rutas base (web y usuarios básicos)
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
-// Rutas de la API (Aquí conectamos los archivos nuevos)
-// Nota: La ruta que definas aquí se suma a la definida en el archivo.
-// Ej: '/api/categorias' + '/' = localhost:3000/api/categorias
-
 app.use('/api/categorias', categoriasRouter);
 app.use('/api/subcategorias', subcategoriasRouter);
 app.use('/api/niveles_dificultad', nivelesRouter);
 app.use('/api/rangos_edad', rangosRouter);
 
 
-// --- ARRANQUE DE LA BASE DE DATOS (Sequelize) ---
+// --- ARRANQUE DE LA BASE DE DATOS Y SEEDER ---
 
-db.sequelize.sync({ force: false }) 
-    .then(() => {
+db.sequelize.sync({ force: false })
+    .then(async () => {
         console.log("✅ Base de datos sincronizada correctamente");
+
+        // --- DIAGNÓSTICO DE MODELOS (IMPORTANTE) ---
+        // Esto imprimirá qué modelos existen realmente en 'db'
+        console.log("🔍 Modelos cargados en DB:", Object.keys(db));
+
+        // Verificamos si db.User existe antes de usarlo
+        if (!db.User) {
+            console.error("❌ ERROR FATAL: El modelo 'User' no se cargó. Revisa que el archivo en /models se llame User.js y tenga module.exports correcto.");
+            return; // Detenemos aquí para no crashear
+        }
+
+        try {
+            const adminExistente = await db.User.findOne({ 
+                where: { email: 'admin@admin.com' } 
+            });
+
+            if (!adminExistente) {
+                console.log("⚠️ Creando Administrador por defecto...");
+                
+                const passwordHash = bcrypt.hashSync('admin123', 8);
+
+                await db.User.create({
+                    nombre: 'Super Administrador',
+                    email: 'admin@admin.com',
+                    password: passwordHash,
+                    rol: 'admin'
+                });
+
+                console.log("🚀 Usuario Admin creado con éxito.");
+                console.log("📧 Email: admin@admin.com");
+                console.log("🔑 Pass: admin123");
+            } else {
+                console.log("ℹ️ El admin ya existe.");
+            }
+            
+        } catch (error) {
+            console.error("❌ Error al intentar crear el usuario admin:", error);
+        }
     })
     .catch((err) => {
         console.error("❌ Error al sincronizar la DB:", err);
     });
 
-// --- MANEJADORES DE ERRORES (Devuelven JSON) ---
 
-// Manejador 404 (Not Found)
+// --- MANEJADORES DE ERRORES ---
+
 app.use(function(req, res, next) {
-  res.status(404).json({ 
-      status: 404, 
-      message: "Ruta no encontrada (404). Verifica la URL." 
-  }); 
+  res.status(404).json({ status: 404, message: "Ruta no encontrada." }); 
 });
 
-// Manejador de errores general (500)
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // Renderiza página de error si es petición web, o JSON si es API
-  // Como prefieres API, forzamos respuesta JSON si hay error
   res.status(err.status || 500);
-  res.json({
-    status: err.status || 500,
-    message: err.message,
-    stack: req.app.get('env') === 'development' ? err.stack : undefined 
-  });
+  res.json({ status: err.status || 500, message: err.message });
 });
 
 module.exports = app;

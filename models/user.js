@@ -1,5 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
-  const Usuario = sequelize.define('Usuario', {
+  // OJO: El primer parámetro es 'User' con mayúscula
+  const User = sequelize.define('User', {
     nombre: DataTypes.STRING,
     email: {
         type: DataTypes.STRING,
@@ -7,13 +8,16 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false
     },
     password: {
-        type: DataTypes.STRING, // Aquí guardaremos el hash encriptado
+        type: DataTypes.STRING,
         allowNull: false
     },
     rol: {
         type: DataTypes.STRING, 
-        defaultValue: 'profesor' // Por defecto 'profesor', o 'admin'
+        defaultValue: 'profesor' 
     }
+  }, {
+    tableName: 'Users' // Forzamos el nombre de la tabla
   });
-  return Usuario;
+  
+  return User;
 };
