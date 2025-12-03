@@ -1,21 +1,43 @@
 var express = require('express');
 var router = express.Router();
-// Importamos la base de datos subiendo un nivel (..) hacia la carpeta models
 const db = require('../models');
 
 // --- CRUD CATEGORIAS ---
 // Ruta base en app.js: /api/categorias
 
-// POST: Crear categoría
+// POST: Crear categoría (Con validación de duplicados)
 router.post('/', async (req, res) => {
     try {
+        // 1. Extraemos el campo por el cual quieres verificar la duplicidad.
+        // IMPORTANTE: Asegúrate de que 'nombre' sea el nombre real de tu columna en la BD.
+        // Si tu columna se llama 'descripcion' o 'titulo', cámbialo aquí.
+        const { nombre } = req.body; 
+
+        // 2. Buscamos si ya existe una categoría con ese nombre
+        const existe = await db.Categoria.findOne({ 
+            where: { nombre: nombre } 
+        });
+
+        // 3. Si encontramos algo, devolvemos un mensaje y detenemos la ejecución
+        if (existe) {
+            // Usamos return para salir de la función y no intentar crearla
+            // 409 Conflict es el código HTTP estándar para registros duplicados
+            return res.status(409).json({ 
+                message: 'Esa categoría ya existe.' 
+            });
+        }
+
+        // 4. Si no existe, procedemos a crearla normalmente
         const nuevaCategoria = await db.Categoria.create(req.body);
         res.status(201).json(nuevaCategoria);
+
     } catch (error) {
         console.error("Error al crear la categoría:", error);
         res.status(400).json({ error: 'Error al crear la categoría. Datos inválidos.' });
     }
 });
+
+// ... (El resto de tus rutas GET, PUT, DELETE siguen igual) ...
 
 // GET: Listar todas
 router.get('/', async (req, res) => {
