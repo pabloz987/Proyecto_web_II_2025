@@ -58,4 +58,109 @@ router.post('/register', [verificarToken, esAdmin], async (req, res) => {
     }
 });
 
+
+// --- OBTENER TODOS LOS USUARIOS (SOLO ADMIN) ---
+router.get('/', [verificarToken, esAdmin], async (req, res) => {
+    try {
+        // Buscamos todos los usuarios, excluyendo el campo 'password'
+        const usuarios = await db.User.findAll({
+            attributes: { exclude: ['password'] }
+        });
+        
+        res.status(200).json(usuarios);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener usuarios", details: error.message });
+    }
+});
+
+// --- OBTENER UN USUARIO POR ID (SOLO ADMIN) ---
+router.get('/:id', [verificarToken, esAdmin], async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Buscamos el usuario por su ID, excluyendo el campo 'password'
+        const usuario = await db.User.findByPk(id, {
+            attributes: { exclude: ['password'] }
+        });
+
+        if (!usuario) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        res.status(200).json(usuario);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener el usuario", details: error.message });
+    }
+});
+
+// --- ACTUALIZAR UN USUARIO POR ID (SOLO ADMIN) ---
+router.put('/:id', [verificarToken, esAdmin], async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, email, password, rol } = req.body;
+        
+        // Buscamos el usuario
+        const usuario = await db.User.findByPk(id);
+
+        if (!usuario) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+        
+        let updateData = { nombre, email, rol };
+
+        // Si se proporciona una nueva contraseña, la hasheamos
+        if (password) {
+            updateData.password = bcrypt.hashSync(password, 8);
+        }
+        
+        // Actualizamos el usuario
+        const [updatedRows] = await db.User.update(updateData, {
+            where: { id: id }
+        });
+
+        if (updatedRows === 0) {
+            return res.status(400).json({ message: "No se pudo actualizar el usuario (posiblemente datos idénticos)" });
+        }
+
+        // Recuperar el usuario actualizado para la respuesta, excluyendo la contraseña
+        const usuarioActualizado = await db.User.findByPk(id, {
+            attributes: { exclude: ['password'] }
+        });
+        
+        res.status(200).json({ message: "Usuario actualizado con éxito", usuario: usuarioActualizado });
+
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ error: "Error al actualizar el usuario", details: error.message });
+    }
+});
+
+// --- ELIMINAR UN USUARIO POR ID (SOLO ADMIN) ---
+router.delete('/:id', [verificarToken, esAdmin], async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Eliminamos el usuario
+        const deletedRows = await db.User.destroy({
+            where: { id: id }
+        });
+
+        if (deletedRows === 0) {
+            return res.status(404).json({ message: "Usuario no encontrado o ya eliminado" });
+        }
+
+        res.status(200).json({ message: "Usuario eliminado con éxito" });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al eliminar el usuario", details: error.message });
+    }
+});
+
+
+
 module.exports = router;
