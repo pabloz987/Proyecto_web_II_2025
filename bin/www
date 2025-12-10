@@ -6,8 +6,8 @@
 
 var app = require('../app');
 var debug = require('debug')('editor-de-preguntas:server');
-var https = require('https'); // CAMBIO: Usamos https en lugar de http
-var fs = require('fs');       // CAMBIO: Necesitamos fs para leer los certificados
+var spdy = require('spdy'); // CAMBIO: Usamos spdy en lugar de https
+var fs = require('fs');
 
 /**
  * Get port from environment and store in Express.
@@ -17,17 +17,23 @@ var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
- * Create HTTPS server.
+ * Create HTTP/2 server.
  */
 
-// CAMBIO: Leemos los certificados que generaste en el Paso 1
-var httpsOptions = {
+// Usamos los mismos certificados que generaste antes
+var options = {
   key: fs.readFileSync('./server.key'),
-  cert: fs.readFileSync('./server.cert')
+  cert: fs.readFileSync('./server.cert'),
+  
+  // Opciones extra para optimizar HTTP/2
+  spdy: {
+    protocols: ['h2', 'spdy/3.1', 'http/1.1'],
+    plain: false,
+  }
 };
 
-// CAMBIO: Creamos el servidor con las opciones de seguridad
-var server = https.createServer(httpsOptions, app);
+// CAMBIO: spdy crea un servidor compatible con HTTP/2 y Express
+var server = spdy.createServer(options, app);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -95,5 +101,5 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
-  console.log("🔒 Servidor HTTPS corriendo en https://localhost:" + port);
+  console.log("🚀 Servidor HTTP/2 seguro corriendo en https://localhost:" + port);
 }

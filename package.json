@@ -19,7 +19,8 @@
     "mysql2": "^3.15.3",
     "pug": "^2.0.0-beta11",
     "sequelize": "^6.37.7",
-    "serve-favicon": "~2.4.5"
+    "serve-favicon": "~2.4.5",
+    "spdy": "^4.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
