@@ -6,7 +6,8 @@
 
 var app = require('../app');
 var debug = require('debug')('editor-de-preguntas:server');
-var http = require('http');
+var https = require('https'); // CAMBIO: Usamos https en lugar de http
+var fs = require('fs');       // CAMBIO: Necesitamos fs para leer los certificados
 
 /**
  * Get port from environment and store in Express.
@@ -16,10 +17,17 @@ var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
- * Create HTTP server.
+ * Create HTTPS server.
  */
 
-var server = http.createServer(app);
+// CAMBIO: Leemos los certificados que generaste en el Paso 1
+var httpsOptions = {
+  key: fs.readFileSync('./server.key'),
+  cert: fs.readFileSync('./server.cert')
+};
+
+// CAMBIO: Creamos el servidor con las opciones de seguridad
+var server = https.createServer(httpsOptions, app);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -87,4 +95,5 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
+  console.log("🔒 Servidor HTTPS corriendo en https://localhost:" + port);
 }
